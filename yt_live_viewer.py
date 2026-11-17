@@ -25,6 +25,7 @@ except ImportError:
     sys.exit("playwright nao instalado: python -m pip install playwright && python -m playwright install chrome")
 
 DEFAULT_URL = "https://www.youtube.com/watch?v=8uwd5O8Q9l4"
+DEBUG = False
 
 UAS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
@@ -196,6 +197,12 @@ def make_page(browser, vid, idx, proxy=None):
     try:
         page.goto(url, wait_until="domcontentloaded", timeout=35000)
         page.evaluate("() => { const v=document.querySelector('video'); if(v){v.muted=true;v.play().catch(()=>{});} }")
+        if DEBUG:
+            page.wait_for_timeout(9000)
+            log(f"DEBUG {idx} title={page.title()}")
+            log("DEBUG body=" + page.locator("body").inner_text()[:700].replace("\n", " | "))
+            log("DEBUG video=" + str(page.evaluate(
+                "()=>{const v=document.querySelector('video');return v?{t:v.currentTime,paused:v.paused,ready:v.readyState,src:(v.currentSrc||'').slice(0,60),err:v.error&&v.error.message}:null}")))
         page.wait_for_function(
             "() => { const v = document.querySelector('video'); return v && v.currentTime > 0.15 && !v.paused; }",
             timeout=30000,
@@ -226,6 +233,7 @@ def main():
     ap.add_argument("--minutes", type=float, default=10)
     ap.add_argument("--headless", action="store_true")
     ap.add_argument("--chrome", action="store_true", help="usa o Google Chrome instalado")
+    ap.add_argument("--debug-page", action="store_true", help="imprime estado da pagina/player")
     ap.add_argument("--check-every", type=int, default=20, help="segundos entre checagens")
     ap.add_argument("--proxy-file", help="arquivo com proxies (um por linha)")
     ap.add_argument("--webshare-token", help="API token do Webshare (plano free: 10 proxies)")
@@ -233,6 +241,8 @@ def main():
     ap.add_argument("--verify-proxies", action="store_true",
                     help="testa cada proxy no browser antes de usar (mais lento, mais preciso)")
     a = ap.parse_args()
+    global DEBUG
+    DEBUG = a.debug_page
 
     vid = video_id(a.url)
     proxies = []
@@ -280,6 +290,12 @@ def main():
                 for i, v in enumerate(viewers):
                     st = state(v["page"])
                     if st.startswith("playing"):
+                        t_atual = int(st.split("t=")[-1]) if "t=" in st else 0
+                        if t_atual <= v.get("last_t", -1) + 1:
+                            log(f"viewer {i}: player travado em t={t_atual} -> reconectando")
+                            st = "travado"
+                        v["last_t"] = t_atual
+                    if st.startswith("playing"):
                         ativos += 1
                     elif v["ok"]:
                         log(f"viewer {i}: {st} -> reconectando")
@@ -289,6 +305,7 @@ def main():
                             v["page"].wait_for_function(
                                 "() => { const v=document.querySelector('video'); return v && v.currentTime>0.15 && !v.paused; }",
                                 timeout=25000)
+                            v["last_t"] = -1
                         except Exception as e:
                             log(f"viewer {i}: reconexao falhou ({str(e)[:70]})")
                             v["ok"] = False

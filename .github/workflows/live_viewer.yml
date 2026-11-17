@@ -15,6 +15,10 @@ on:
         description: 'Viewers por runner'
         required: true
         default: '15'
+      debug:
+        description: 'Imprime estado da pagina (1 ou 0)'
+        required: false
+        default: '0'
 
 jobs:
   assistir:
@@ -53,4 +57,5 @@ jobs:
             --minutes ${{ inputs.minutes }} \
             --headless \
             --check-every 30 \
+            ${{ inputs.debug == '1' && '--debug-page' || '' }} \
             $extra
