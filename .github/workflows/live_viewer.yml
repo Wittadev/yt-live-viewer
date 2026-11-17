@@ -14,7 +14,6 @@ on:
 
 jobs:
   assistir:
-    if: matrix.i <= fromJSON(inputs.jobs)
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -24,17 +23,21 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
+        if: matrix.i <= fromJSON(inputs.jobs)
 
       - uses: actions/setup-python@v5
+        if: matrix.i <= fromJSON(inputs.jobs)
         with:
           python-version: '3.12'
 
       - name: Dependências
+        if: matrix.i <= fromJSON(inputs.jobs)
         run: |
           python -m pip install playwright requests
           python -m playwright install --with-deps chromium
 
       - name: Assistir
+        if: matrix.i <= fromJSON(inputs.jobs)
         env:
           WEBSHARE_TOKEN: ${{ secrets.WEBSHARE_TOKEN }}
         run: |
