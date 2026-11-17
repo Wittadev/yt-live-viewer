@@ -11,6 +11,10 @@ on:
         description: 'Quantos runners (IPs diferentes)'
         required: true
         default: '10'
+      viewers:
+        description: 'Viewers por runner'
+        required: true
+        default: '15'
 
 jobs:
   assistir:
@@ -45,7 +49,7 @@ jobs:
           if [ -n "$WEBSHARE_TOKEN" ]; then extra="--webshare-token $WEBSHARE_TOKEN --verify-proxies"; fi
           python yt_live_viewer.py \
             --url https://www.youtube.com/watch?v=8uwd5O8Q9l4 \
-            --viewers 1 \
+            --viewers ${{ inputs.viewers }} \
             --minutes ${{ inputs.minutes }} \
             --headless \
             --check-every 30 \
