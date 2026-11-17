@@ -1,0 +1,49 @@
+name: YouTube live viewer
+
+on:
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: 'Minutos por runner'
+        required: true
+        default: '20'
+      jobs:
+        description: 'Quantos runners (IPs diferentes)'
+        required: true
+        default: '10'
+
+jobs:
+  assistir:
+    if: matrix.i <= fromJSON(inputs.jobs)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        i: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Dependências
+        run: |
+          python -m pip install playwright requests
+          python -m playwright install --with-deps chromium
+
+      - name: Assistir
+        env:
+          WEBSHARE_TOKEN: ${{ secrets.WEBSHARE_TOKEN }}
+        run: |
+          extra=""
+          if [ -n "$WEBSHARE_TOKEN" ]; then extra="--webshare-token $WEBSHARE_TOKEN --verify-proxies"; fi
+          python yt_live_viewer.py \
+            --url https://www.youtube.com/watch?v=8uwd5O8Q9l4 \
+            --viewers 1 \
+            --minutes ${{ inputs.minutes }} \
+            --headless \
+            --check-every 30 \
+            $extra
